@@ -1,25 +1,44 @@
 const fs = require("fs")
 
+const Tour = require(".././models/tourModel")
+
+const createTourModel = async (req, res) => {
+  try {
+    const newTour = await Tour.create(req.body) // Membuat tour baru dengan data dari req.body
+    res.status(201).json({
+      status: "success",
+      data: {
+        tour: newTour,
+      },
+    })
+  } catch (err) {
+    res.status(400).json({
+      status: "fail",
+      message: err.message, // Menampilkan pesan kesalahan jika terjadi kesalahan
+    })
+  }
+}
+
 const tours = JSON.parse(
   fs.readFileSync(
     `${__dirname}/../dev-data/data/tours-simple.json`
   )
 )
 
-const checkId = (req, res, next, val) => {
-  console.log(val * 1)
-  const tour = tours.find(
-    (el) => el.id === val * 1
-  )
+// const checkId = (req, res, next, val) => {
+//   console.log(val * 1)
+//   const tour = tours.find(
+//     (el) => el.id === val * 1
+//   )
 
-  if (!tour) {
-    return res.status(404).json({
-      status: "failed",
-      message: `data with ${val} this not found`,
-    })
-  }
-  next()
-}
+//   if (!tour) {
+//     return res.status(404).json({
+//       status: "failed",
+//       message: `data with ${val} this not found`,
+//     })
+//   }
+//   next()
+// }
 
 const checkBody = (req, res, next) => {
   if (!req.body.name || !req.body.price) {
@@ -31,26 +50,43 @@ const checkBody = (req, res, next) => {
   next()
 }
 
-const getAllTours = (req, res) => {
-  res.status(200).json({
-    status: "success",
-    requestTime: req.requestTime,
-    data: {
-      tours,
-    },
-  })
+const getAllTours = async (req, res) => {
+  try {
+    const tours = await Tour.find()
+    res.status(200).json({
+      status: "success",
+      requestTime: req.requestTime,
+      length: tours.length,
+      data: {
+        tours,
+      },
+    })
+  } catch (err) {
+    res.status(400).json({
+      status: "failed",
+      message: err.message,
+    })
+  }
 }
 
-const getTourById = (req, res) => {
-  const id = req.params.id * 1
-  const tour = tours.find((el) => el.id === id)
+const getTourById = async (req, res) => {
+  try {
+    const tour = await Tour.findById(
+      req.params.id
+    )
 
-  res.status(200).json({
-    status: "success",
-    data: {
-      tour,
-    },
-  })
+    res.status(200).json({
+      status: "success",
+      data: {
+        tour,
+      },
+    })
+  } catch (err) {
+    res.status(400).json({
+      status: "success",
+      message: err.message,
+    })
+  }
 }
 
 const createTour = (req, res) => {
@@ -78,12 +114,27 @@ const createTour = (req, res) => {
   )
 }
 
-const editTour = (req, res) => {
-  const id = req.params.id * 1
-  // findIndex = -1 (kalau data nya gk ada)
-  const tourIndex = tours.findIndex(
-    (el) => el.id === id
-  )
+const editTour = async (req, res) => {
+  try {
+    const id = req.params.id
+
+    const doc = await Tour.findById(id)
+
+    tour = req.body
+    await tour.save()
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        tour: tour,
+      },
+    })
+  } catch (err) {
+    res.status(400).json({
+      status: "success",
+      message: err.message,
+    })
+  }
 
   tours[tourIndex] = {
     ...tours[tourIndex],
@@ -131,12 +182,68 @@ const removeTour = (req, res) => {
   )
 }
 
+const editTourModels = async (req, res) => {
+  try {
+    const id = req.params.id
+    const updateTour =
+      await Tour.findByIdAndUpdate(id, req.body, {
+        new: true,
+      })
+    if (!updateTour) {
+      return res.status(400).json({
+        status: 400,
+        message: "id not found",
+      })
+    }
+    res.status(201).json({
+      status: "success",
+      data: {
+        tour: updateTour,
+      },
+    })
+  } catch (err) {
+    res.status(500).json({
+      status: 500,
+      message: err.message,
+    })
+  }
+}
+
+const removeTourModels = async (req, res) => {
+  try {
+    const id = req.params.id
+    const tour = await Tour.findByIdAndDelete(id)
+
+    if (!tour) {
+      return res.status(400).json({
+        status: "success",
+        message: `success delete id ${id}`,
+        data: null,
+      })
+    }
+    res.status(201).json({
+      status: "success",
+      data: {
+        tour: tour,
+      },
+    })
+  } catch (err) {
+    res.status(500).json({
+      status: 500,
+      message: err.message,
+    })
+  }
+}
+
 module.exports = {
   getAllTours,
   getTourById,
   createTour,
   editTour,
+  editTourModels,
+  removeTourModels,
   removeTour,
-  checkId,
+  // checkId,
   checkBody,
+  createTourModel,
 }
